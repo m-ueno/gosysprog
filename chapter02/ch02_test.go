@@ -37,6 +37,11 @@ func ExampleQ1() {
 		panic(err)
 	}
 	fmt.Fprintf(file, "Write with os.Open at %v", time.Now())
+
+	m := map[string]int64{"a": 1}
+	fmt.Fprintf(os.Stdout, "Write with fprintf %v", m)
+	// Output:
+	// Write with fprintf map[a:1]
 }
 
 func ExampleQ2() {
