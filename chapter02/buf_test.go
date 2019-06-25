@@ -1,4 +1,4 @@
-package main
+package chapter02_test
 
 import (
 	"bufio"

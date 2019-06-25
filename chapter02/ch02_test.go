@@ -1,20 +1,20 @@
-package main
+package chapter02_test
 
 import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
-	"testing"
 	"time"
 )
 
 // 2.4.7
-func TestFprintf(t *testing.T) {
+func ExampleFprintf() {
 	fmt.Fprintf(os.Stdout, "Write with os.Stdout at %v", time.Now())
+	// Output: Write with os.Stdout at
 }
 
-func TestJSONEncode(t *testing.T) {
+func ExampleJSONEncode() {
 	/*
 	 * NewEncoder()は与えられたWriterに書き込むencoderを返す
 	 **/
@@ -25,9 +25,14 @@ func TestJSONEncode(t *testing.T) {
 		"example": "json",
 		"hello":   "world",
 	})
+	// Output:
+	// {
+	//     "example": "json",
+	//     "hello": "world"
+	// }
 }
 
-func TestQ1(t *testing.T) {
+func ExampleQ1() {
 	file, err := os.Create("q1.txt")
 	if err != nil {
 		panic(err)
@@ -35,9 +40,12 @@ func TestQ1(t *testing.T) {
 	fmt.Fprintf(file, "Write with os.Open at %v", time.Now())
 }
 
-func TestQ2(t *testing.T) {
+func ExampleQ2() {
 	encoder := csv.NewWriter(os.Stdout)
 	encoder.Write([]string{"a", "b"})
 	encoder.Write([]string{"1", "2", "1,2,3"})
 	encoder.Flush()
+	// Output:
+	// a,b
+	// 1,2,"1,2,3"
 }

@@ -1,4 +1,4 @@
-package main
+package chapter02
 
 import (
 	"bufio"
