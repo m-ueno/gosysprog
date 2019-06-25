@@ -11,7 +11,6 @@ import (
 // 2.4.7
 func ExampleFprintf() {
 	fmt.Fprintf(os.Stdout, "Write with os.Stdout at %v", time.Now())
-	// Output: Write with os.Stdout at
 }
 
 func ExampleJSONEncode() {
