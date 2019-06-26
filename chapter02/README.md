@@ -46,4 +46,9 @@ BenchmarkReadFileBuffered-4          200           7933353 ns/op
 
 * 2.4.7 フォーマットしてデータをio.Writerに書き出す fmt.Fprintf
 
-## 問題
+## 問題2.3
+
+* JSONをgzip化してクライアントに返す
+* gzipする前のJSONをstdoutに吐き出す
+* io.MultiWriter
+* Flush()
