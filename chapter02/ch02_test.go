@@ -8,6 +8,34 @@ import (
 	"time"
 )
 
+// 2.2
+
+type Talker interface {
+	Talk()
+	SetName(string)
+}
+
+type Human struct {
+	name string
+}
+
+func (h *Human) Talk() {
+	fmt.Printf("I'm %s.", h.name)
+}
+
+func (h *Human) SetName(s string) {
+	h.name = s
+}
+
+func ExampleIF() {
+	var talker Talker = &Human{""}
+	talker.SetName("Yo")
+	talker.Talk()
+
+	// Output:
+	// I'm Yo.
+}
+
 // 2.4.7
 func ExampleFprintf() {
 	fmt.Fprintf(os.Stdout, "Write with os.Stdout at %v", time.Now())
