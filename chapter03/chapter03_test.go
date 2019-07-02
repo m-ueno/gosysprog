@@ -181,7 +181,7 @@ func ExampleSectionReader() {
 // 3.5.2
 func ExampleEndian() {
 	data := []byte{0x0, 0x0, 0x27, 0x10} // 0d10000 = 0x2710 (big endian)
-	var i int32
+	var i int32                          // この型情報は次の行で使われる
 	binary.Read(bytes.NewReader(data), binary.BigEndian, &i)
 	fmt.Printf("data: %d\n", i)
 
