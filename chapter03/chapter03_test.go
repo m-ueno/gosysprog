@@ -110,6 +110,20 @@ func Example_NewReadWriter() {
 	// 追加データテストデータ
 }
 
+// 3.4.2
+func Example_FileRead() {
+	file, err := os.Open("test.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	io.Copy(os.Stdout, file) // os.File implements io.Reader
+
+	// Output:
+	// Hello!
+}
+
 // 3.4.3
 func TestNetRead(t *testing.T) {
 	conn, err := net.Dial("tcp", "ascii.jp:80")
