@@ -19,6 +19,6 @@ func main() {
 			panic(err)
 		}
 
-		// fmt.Printf("size=%d input='%s'\n", size, string(buffer))
+		fmt.Printf("size=%d input='%s'\n", size, string(buffer))
 	}
 }
