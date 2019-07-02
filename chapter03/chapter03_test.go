@@ -160,6 +160,15 @@ func TestNewReader(t *testing.T) {
 	_ = bytes.NewReader([]byte{0x10, 0x20, 0x30})
 }
 
+// 3.5.1
+func ExampleLimitReader() {
+	src := bytes.NewBufferString("あいうえおかきくけこ") // 'あ': 3bytes
+	lReader := io.LimitReader(src, 9)          // limit 9bytes
+	io.Copy(os.Stdout, lReader)
+
+	// Output: あいう
+}
+
 // 3.5
 func ExampleSectionReader() {
 	reader := strings.NewReader("example of io.SectionReader\n")
