@@ -4,7 +4,7 @@
     * Cではファイル読み書きに、OSのファイルディスクリプタを使うが、
     * Goではio.Writerインタフェースを使う
 * NOTE
-    * Goでも直接fd指定できる：`file, err = os.NewFile(ファイルディスクリプタ, 名前)`
+    * Goでも直接ファイルディスクリプタ指定できる：`file, err = os.NewFile(ファイルディスクリプタ, 名前)`
 
 ## 2.3 io.Writerはインタフェース
 
@@ -66,3 +66,11 @@ BenchmarkWriteFileBuffered-4        1000           2167811 ns/op
 BenchmarkReadFile-4                   10         132938858 ns/op
 BenchmarkReadFileBuffered-4          200           7933353 ns/op
 ```
+
+## おまけ：ポインタか値か
+
+* https://stackoverflow.com/questions/23542989/pointers-vs-values-in-parameters-and-return-values
+
+* レシーバーは、副作用があるならポインタ
+* スライス・マップ・インタフェース・stringsは、内部ではポインタなのであえてポインタにしなくていい
+* その他は、でかいオブジェクトを書き換えるならポインタ。そうでなければ値
