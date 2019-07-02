@@ -47,12 +47,7 @@ type Writer interface {
 
 * JSONをgzip化してクライアントに返す
 * gzipする前のJSONをstdoutに吐き出す
-* io.MultiWriter
 * Flush()を忘れない
-
-* map -> json -> stdout
-              -> gzip -> w
-
 
 ## おまけ：バッファ付き出力の速度比較
 
@@ -67,10 +62,8 @@ BenchmarkReadFile-4                   10         132938858 ns/op
 BenchmarkReadFileBuffered-4          200           7933353 ns/op
 ```
 
-## おまけ：ポインタか値か
+## 役立ちリファレンス
 
-* https://stackoverflow.com/questions/23542989/pointers-vs-values-in-parameters-and-return-values
-
-* レシーバーは、副作用があるならポインタ
-* スライス・マップ・インタフェース・stringsは、内部ではポインタなのであえてポインタにしなくていい
-* その他は、でかいオブジェクトを書き換えるならポインタ。そうでなければ値
+* コードレビューコメント集 <https://github.com/golang/go/wiki/CodeReviewComments>
+* Effective go <https://golang.org/doc/effective_go.html>
+* FAQ <https://golang.org/doc/faq>
