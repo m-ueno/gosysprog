@@ -3,6 +3,7 @@ package main_test
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -175,4 +176,15 @@ func ExampleSectionReader() {
 	sectionReader := io.NewSectionReader(reader, 11, 7)
 	io.Copy(os.Stdout, sectionReader)
 	// Output: io.Sect
+}
+
+// 3.5.2
+func ExampleEndian() {
+	data := []byte{0x0, 0x0, 0x27, 0x10} // 0d10000 = 0x2710 (big endian)
+	var i int32
+	binary.Read(bytes.NewReader(data), binary.BigEndian, &i)
+	fmt.Printf("data: %d\n", i)
+
+	// Output:
+	// data: 10000
 }
