@@ -15,7 +15,7 @@ import (
 
 // 3.1
 func ExampleUseReaderDirectly() {
-	r := strings.NewReader("asdfasdf")
+	r := bytes.NewBuffer([]byte("asdfasdf")) // p.45 bytes.Bufferだけ覚えとけ
 	buffer := make([]byte, 1024)
 	size, err := r.Read(buffer)
 	if err != nil {
@@ -29,7 +29,7 @@ func ExampleUseReaderDirectly() {
 
 // 3.2.1
 func ExampleHelper_ReadAll() {
-	reader := strings.NewReader("abcd")
+	reader := bytes.NewBufferString("abcd") // p.45 bytes.Bufferだけ覚えとけ
 	buffer, err := ioutil.ReadAll(reader)
 	if err != nil {
 		panic(err)
@@ -46,7 +46,7 @@ func ExampleHelper_ReadAll() {
 // 3.2.2
 func ExampleHelper_Copy() {
 	reader := bytes.NewBufferString("abcde")
-	// reader := strings.NewReader("abcde")
+	// reader := strings.NewReader("abcde") // p.45 bytes.Bufferだけ覚えとけ
 	writer := bytes.NewBufferString("")
 
 	size, err := io.Copy(writer, reader)
