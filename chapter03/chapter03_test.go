@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -140,12 +141,19 @@ func TestNetRead(t *testing.T) {
 	io.Copy(os.Stdout, res.Body)
 }
 
-func TestNewBytesBuffer(t *testing.T) {
+func ExampleNewBytesBuffer() {
 	var buf1 bytes.Buffer
-	buf2 := bytes.NewBuffer([]byte("abc123"))
-	buf3 := bytes.NewBufferString("abc000")
+	buf2 := bytes.NewBuffer([]byte("abc123")) // ポインタ
+	buf3 := bytes.NewBufferString("abc000")   // ポインタ
 
-	fmt.Println(buf1, buf2, buf3)
+	fmt.Println(reflect.TypeOf(buf1))
+	fmt.Println(reflect.TypeOf(buf2))
+	fmt.Println(reflect.TypeOf(buf3))
+
+	// Output:
+	// bytes.Buffer
+	// *bytes.Buffer
+	// *bytes.Buffer
 }
 
 func TestNewReader(t *testing.T) {
