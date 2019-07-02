@@ -5,12 +5,110 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
 )
+
+// 3.1
+func ExampleUseReaderDirectly() {
+	r := strings.NewReader("asdfasdf")
+	buffer := make([]byte, 1024)
+	size, err := r.Read(buffer)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(size)
+	// Output:
+	// 8
+}
+
+// 3.2.1
+func ExampleHelper_ReadAll() {
+	reader := strings.NewReader("abcd")
+	buffer, err := ioutil.ReadAll(reader)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(buffer)
+	fmt.Println(string(buffer))
+
+	// Output:
+	// [97 98 99 100]
+	// abcd
+}
+
+// 3.2.2
+func ExampleHelper_Copy() {
+	reader := bytes.NewBufferString("abcde")
+	// reader := strings.NewReader("abcde")
+	writer := bytes.NewBufferString("")
+
+	size, err := io.Copy(writer, reader)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(size)
+	fmt.Println(reader)
+	fmt.Println(writer)
+
+	// Output:
+	// 5
+	//
+	// abcde
+}
+
+// 3.2.2
+func ExampleHelper_CopyBuffer() {
+	// 8KB buffer
+	buffer := make([]byte, 8*1024)
+	src := bytes.NewBuffer([]byte{})
+	dst := bytes.NewBufferString("")
+
+	for i := 0; i < 1024; i++ {
+		src.Write([]byte("1234567\n"))
+	}
+
+	written, err := io.CopyBuffer(dst, src, buffer)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(written)
+	// Output:
+	// 8192
+}
+
+// 3.3.2
+func ExampleInterface_Cast() {
+	// io.ReadCloserインタフェースが要求されているとき、ダミーのClose()を生やす
+	reader := strings.NewReader("テストデータ")
+	var _ io.ReadCloser = ioutil.NopCloser(reader)
+	// Output:
+}
+
+// 3.3.2
+func Example_NewReadWriter() {
+	var reader *bufio.Reader = bufio.NewReader(strings.NewReader("テストデータ"))
+	var writer *bufio.Writer = bufio.NewWriter(os.Stdout)
+	readWriter := bufio.NewReadWriter(reader, writer)
+	var _ io.ReadWriter = readWriter
+
+	readWriter.Write([]byte("追加データ"))
+	readWriter.Flush()
+
+	_, err := io.Copy(os.Stdout, readWriter)
+	if err != nil {
+		panic(err)
+	}
+
+	// Output:
+	// 追加データテストデータ
+}
 
 // 3.4.3
 func TestNetRead(t *testing.T) {
