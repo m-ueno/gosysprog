@@ -251,7 +251,7 @@ func ExampleFscan() {
 	var i int32
 	var f, g float64
 	var s string
-	fmt.Fscan(reader, i, f, g, s)
+	fmt.Fscan(reader, &i, &f, &g, &s) // pointerにつき注意
 	fmt.Printf("i=%#v, f=%#v, g=%#v, s=%#v\n", i, f, g, s)
-	// Output:
+	// Output: i=123, f=1.234, g=10000, s="test"
 }
