@@ -2,6 +2,7 @@ package main_test
 
 import (
 	"archive/zip"
+	"bytes"
 	"crypto/rand"
 	"fmt"
 	"io"
@@ -52,4 +53,27 @@ func ExampleCreateZipFileWithInterface() {
 	io.Copy(writer, source)
 
 	// Output:
+}
+
+// Q3.5
+func myCopyN(w io.Writer, r io.Reader, length int) (written int64, err error) {
+	rlimit := io.LimitReader(r, int64(length))
+	written, err = io.Copy(w, rlimit)
+	return
+}
+
+func ExampleCopyN() {
+	r := bytes.NewReader([]byte("日本語&フォント"))
+	w := bytes.NewBuffer([]byte{})
+
+	size, err := myCopyN(w, r, 10)
+	// size, err := io.CopyN(w, r, 10)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(size)
+	io.Copy(os.Stdout, w)
+	// Output:
+	// 10
+	// 日本語&
 }
