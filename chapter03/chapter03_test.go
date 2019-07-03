@@ -188,3 +188,58 @@ func ExampleEndian() {
 	// Output:
 	// data: 10000
 }
+
+// 3.6.1
+var source = `1行目
+2行目
+3行目`
+
+func ExampleReadString() {
+	reader := bufio.NewReader(strings.NewReader(source))
+	for {
+		line, err := reader.ReadString('\n')
+		fmt.Printf("%#v\n", line)
+		if err == io.EOF {
+			break
+		}
+	}
+	// \nも含めて出力する
+
+	// Output:
+	// "1行目\n"
+	// "2行目\n"
+	// "3行目"
+}
+
+func ExampleScanner() {
+	scanner := bufio.NewScanner(strings.NewReader(source))
+	for scanner.Scan() {
+		fmt.Printf("%#v\n", scanner.Text())
+	}
+	// \nは出力しない
+
+	// Output:
+	// "1行目"
+	// "2行目"
+	// "3行目"
+}
+
+func ExampleScanner_Split() {
+	scanner := bufio.NewScanner(strings.NewReader(source))
+	scanner.Split(bufio.ScanRunes) // 分割関数セット
+	for scanner.Scan() {
+		fmt.Printf("%#v\n", scanner.Text())
+	}
+	// Output:
+	// "1"
+	// "行"
+	// "目"
+	// "\n"
+	// "2"
+	// "行"
+	// "目"
+	// "\n"
+	// "3"
+	// "行"
+	// "目"
+}
