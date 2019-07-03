@@ -243,3 +243,15 @@ func ExampleScanner_Split() {
 	// "行"
 	// "目"
 }
+
+// 3.6.2
+func ExampleFscan() {
+	src := "123 1.234 1.0e4 test"
+	reader := strings.NewReader(src)
+	var i int32
+	var f, g float64
+	var s string
+	fmt.Fscan(reader, i, f, g, s)
+	fmt.Printf("i=%#v, f=%#v, g=%#v, s=%#v\n", i, f, g, s)
+	// Output:
+}
