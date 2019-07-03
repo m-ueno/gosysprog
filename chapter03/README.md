@@ -6,6 +6,13 @@ type Reader interface {
 	Read(p []byte) (n int, err error)
 }
 ```
+## 3.2 補助関数
+
+* ioutil.ReadAll(r io.Reader) ([]byte, err)
+* io.Copy(w, r)
+* io.CopyN(w, r, n) nバイトコピー
+* io.CopyBuffer(w, r, buf) バッファを自分で用意しコピー
+
 
 ## 3.3 複合インタフェース
 
@@ -17,3 +24,16 @@ type ReadWriteCloser interface {
 	Closer
 }
 ```
+
+## 3.4
+
+> `bytes.Buffer` はio.Writerとしてもio.Readerとしても使えます。
+> 読み出しに使えるものとしてはこれだけ覚えておけば（ほぼ）問題ないでしょう。
+
+## 3.5 バイナリ解析
+
+## 3.6 テキスト解析
+
+* bufio.ReaderのReadString(), ReadBytes()
+* bufio.Scanner
+* fmt.Fscan
