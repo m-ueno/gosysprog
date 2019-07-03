@@ -255,3 +255,5 @@ func ExampleFscan() {
 	fmt.Printf("i=%#v, f=%#v, g=%#v, s=%#v\n", i, f, g, s)
 	// Output: i=123, f=1.234, g=10000, s="test"
 }
+
+// 3.7はquiz_test.goへ
