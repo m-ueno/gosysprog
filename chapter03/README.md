@@ -25,15 +25,18 @@ type ReadWriteCloser interface {
 }
 ```
 
-## 3.4
+## 3.4 よく使うもの
 
 > `bytes.Buffer` はio.Writerとしてもio.Readerとしても使えます。
 > 読み出しに使えるものとしてはこれだけ覚えておけば（ほぼ）問題ないでしょう。
 
 ## 3.5 バイナリ解析
 
+* lReader := io.LimitReader(reader, bytes)
+* binary.Read(io.Reader, エンディアン, ポインタ)
+
 ## 3.6 テキスト解析
 
 * bufio.ReaderのReadString(), ReadBytes()
 * bufio.Scanner
-* fmt.Fscan
+* `fmt.Fscan(r io.Reader, format string, a ...interface{}) (int, error)`

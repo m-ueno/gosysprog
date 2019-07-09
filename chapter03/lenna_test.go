@@ -28,7 +28,7 @@ func readChunks(file *os.File) []io.Reader {
 	var chunks []io.Reader
 
 	file.Seek(8, 0)
-	var offset int64 = 8
+	var offset int64 = 8 // 先頭の8バイトを捨てるため, offset=8とセット
 	for {
 		var length int32 // 32bit (4bytes) 読む
 		err := binary.Read(file, binary.BigEndian, &length)
@@ -36,11 +36,15 @@ func readChunks(file *os.File) []io.Reader {
 			break
 		}
 
+		// (1)
 		// なぜ+12?
-		// binary.Readではlengthの4bytesはまだ消化されていないのか.
+		// => offsetは普通の変数なので自分で更新するまで増えず
+		//    チャンクの先頭を指しているので、SectionReaderの終端はoffset+length+12
 		chunks = append(chunks, io.NewSectionReader(file, offset, int64(length)+12))
 
-		// チャンク名(4bytes) + データ長 + CRC(4bytes) 先に移動
+		// (2)
+		// 一方、fileはbinary.Readで4バイト進んでいるので
+		// 次のoffsetを、length+8にセット
 		offset, _ = file.Seek(int64(length+8), 1)
 	}
 
