@@ -51,7 +51,7 @@ for { Accept(); go func }
 
 ## 6.5 Go言語でHTTPサーバーを実装する
 
-### 6.5.1
+### 6.5.1 TCP ソケットを使った HTTP サーバー
 
 ```
 Server is running at localhost:8888
@@ -62,3 +62,14 @@ Accept: */*
 User-Agent: curl/7.58.0
 ```
 
+### 6.5.2 TCP ソケットを使った HTTP クライアント
+
+## 6.6 速度改善( 1 ) : HTTP/1.1 の Keep-Alive に対応させる
+
+### 6.6.1 Keep-Alive 対応の HTTP サーバー
+
+## 6.7 速度改善( 2 ) : 圧縮
+
+## 6.8 速度改善( 3 ) : チャンク形式のボディー送信
+
+## 6.9 速度改善( 4 ) : パイプライニング
