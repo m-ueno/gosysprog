@@ -51,7 +51,15 @@ for { Accept(); go func }
 
 ## 6.5 Go言語でHTTPサーバーを実装する
 
+> ここでは Go 言語に組み込まれている TCP の機能 (net.Conn) だけを使って HTTP による通信を実現してみましょう。
+
+6.5〜6.9までHTTPサーバとHTTPクライアント1つずつつくる。
+
+だんだん速度改善していく。
+
 ### 6.5.1 TCP ソケットを使った HTTP サーバー
+
+`httpserver00/server/main.go`
 
 ```
 Server is running at localhost:8888
