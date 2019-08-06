@@ -76,8 +76,71 @@ User-Agent: curl/7.58.0
 
 ### 6.6.1 Keep-Alive 対応の HTTP サーバー
 
+> このコードで重要なのは、 Accept() を受信したあとに for ループがある点です。
+これにより、 TCP のコネクションが張られたあとに何度もリクエストを受けられるよ
+うにしています。
+
 ## 6.7 速度改善( 2 ) : 圧縮
+
+> リクエスト生成部を改造して、自分が対応しているアルゴリズムを宣言する
+ようにします。サーバーから自分が理解できない圧縮フォーマットでデータを送りつ
+けられても、クライアントではそれを読み込めないからです。下記のように、リクエ
+ストヘッダーの "Accept-Encoding" に「このクライアントは gzip 圧縮を処理でき
+ます」という表明を入れます。
+
+```go
+request, err := http.NewRequest(
+    "POST",
+    "http://localhost:8888",
+    strings.NewReader(sendMessages[current]))
+if err != nil {
+    panic(err)
+}
+request.Header.Set("Accept-Encoding", "gzip")
+```
 
 ## 6.8 速度改善( 3 ) : チャンク形式のボディー送信
 
 ## 6.9 速度改善( 4 ) : パイプライニング
+
+> この機能はパイプライニングと呼ばれ、 HTTP/1.1 の規格にも含まれています。パ
+イプライニングでは、レスポンスがくる前に次から次にリクエストを多重で飛ばすこ
+とで、最終的に通信が完了するまでの時間を短くします(図 6.9 )
+
+* 後方互換性は崩れる (HTTP/1.0しか解釈しないプロキシが経路上にあると使えない)
+
+### 6.9.1 パイプライニングのサーバー実装
+
+* 仕様
+    * サーバー側の状態を変更しないメソッド (GET, HEAD) であれば、サーバー側で並列処理を行う
+    * リクエストの順序でレスポンスを返さなければならない
+
+* レスポンスの順番を制御するためにバッファ付きチャネルを（キューとして）使っている
+
+```go
+// 順番に従って conn に書き出しをする (goroutine で実行される )
+func writeToConn(sessionResponses chan chan *http.Response, conn net.Conn) {
+    defer conn.Close()
+    // 順番に取り出す
+    for sessionResponse := range sessionResponses {
+        // 選択された仕事が終わるまで待つ
+        response := <-sessionResponse
+        response.Write(conn)
+        close(sessionResponse)
+    }
+}
+```
+
+### 6.9.3 パイプライニングと HTTP/2
+
+## まとめ
+
+表 6.2
+本章で紹介してきた高速化手法
+
+|手法|効果|
+|--|--|
+|Keep-Alive|再接続のコストを削減|
+|圧縮|通信時間の短縮|
+|チャンク|レスポンスの送信開始を早める|
+|パイプライニング|通信の多重化|
