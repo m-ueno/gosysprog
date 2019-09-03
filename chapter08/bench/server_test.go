@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -58,7 +59,9 @@ func BenchmarkUDSStreamServer(b *testing.B) {
 func TestMain(m *testing.M) {
 	go UnixDomainSocketStreamServer()
 	go TCPServer()
+	fmt.Println("prepare...")
 	time.Sleep(time.Second)
+	fmt.Println("prepare done")
 
 	code := m.Run()
 	os.Exit(code)
