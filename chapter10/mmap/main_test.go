@@ -92,6 +92,8 @@ func ExampleMMapExec() {
 	}
 	defer m.Unmap()
 
+	m[10000]= 'X'
+
 	fdPath := fmt.Sprintf("/proc/self/fd/%d", f.Fd())
 	syscall.Exec(fdPath, []string{}, nil)
 
