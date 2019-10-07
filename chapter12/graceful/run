@@ -2,6 +2,8 @@
 
 go build
 
+rm app.pid || true
+
 #go get github.com/lestrrat/go-server-starter/cmd/start_server
 start_server --port 8080 --pid-file app.pid -- ./graceful
 
