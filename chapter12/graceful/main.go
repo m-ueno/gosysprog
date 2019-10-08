@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,56 +17,58 @@ import (
 )
 
 func main() {
-	log.Printf("Parent pid=%d\n", os.Getppid())
-
 	//シグナル初期化
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM)
+
 	// Server::Starterからもらったソケットを確認
 	listeners, err := listener.ListenAll()
 	if err != nil {
 		panic(err)
 	}
+	listener := listeners[0]
 
-	// 受付・処理中・完了リクエスト数のカウンタ
-	var accepted uint64
-	var processing uint64
-	var processed uint64
-
-	var wg sync.WaitGroup
-
-	connChan := make(chan net.Conn)
-	die := make(chan bool, 1)
+	// サーバスレッドを起動する
+	// * 接続要求を無限ループで待ち、クライアントが来たら非同期にレスポンス送信
+	// * listner.Close()が呼ばれたとき、shutdownチャネル閉じていたら、graceful shutdown
+	shutdown := make(chan bool)
+	done := make(chan bool)
 	go func() {
-		listener := listeners[0]
-		defer listener.Close()
 
+		// 受付・処理中・完了リクエスト数のカウンタ
+		var accepted uint64
+		var processing uint64
+		var processed uint64
+
+		var wg sync.WaitGroup
 		for {
-			conn, _ := listener.Accept()
-			accepted++
-			connChan <- conn
+			conn, err := listener.Accept()
+			if err != nil {
+				log.Printf("svr: Accept() returned error: %s\n", err)
 
-			// NOTE:
-			// このように書いてもgoroutine外から終わらせることはできない
-			select {
-			case <-die:
-				return
-			default:
+				select {
+				case <-shutdown:
+					log.Println("svr: channel shutdown is closed, so waiting all goroutines finish")
+					wg.Wait()
+					log.Printf("svr: bye pid=%v accepted=%d processing=%d processed=%d\n", os.Getpid(), accepted, processing, processed)
+					close(done)
+					return
+				default:
+				}
+
+				panic(err)
 			}
-		}
-	}()
-
-L:
-	for {
-		select {
-		case conn := <-connChan:
-			log.Printf("* pid=%d remoteaddr=%v\n", os.Getpid(), conn.RemoteAddr())
-
+			accepted++
 			wg.Add(1)
-			processing++
+
+			// log.Printf("*svr: pid=%d remoteaddr=%v\n", os.Getpid(), conn.RemoteAddr())
 
 			go func() {
-				time.Sleep(time.Second)
+				atomic.AddUint64(&processing, 1)
+				defer atomic.AddUint64(&processed, 1)
+				defer wg.Done()
+
+				time.Sleep(time.Second * 3)
 
 				resp := http.Response{
 					StatusCode: 200,
@@ -77,18 +78,24 @@ L:
 				}
 				resp.Write(conn)
 				conn.Close()
-				atomic.AddUint64(&processed, 1)
-				wg.Done()
 			}()
-		case <-signals:
-			// SIGTERMを受け取ったら新たなAccept()をやめて処理中のリクエストがなくなるのを待つ
-			log.Println("drain start...")
-			die <-true // 気休め. Accept()を止めることはできない
-			wg.Wait()
-			log.Println("drain done")
-			break L
 		}
+	}()
+
+	// メインスレッドはシグナルを待つ
+	select {
+	case <-signals:
+		// SIGTERMを受け取ったら新たなAccept()をやめて処理中のリクエストがなくなるのを待つ
+		log.Println("main: shutdown start...")
+
+		close(shutdown)
+		err := listener.Close()
+		if err != nil {
+			log.Println("main:", err)
+		}
+		log.Println("main: waiting server thread shutdown")
+		<-done
+		log.Println("main: shutdown done")
 	}
 
-	log.Printf("bye pid=%v accepted=%d processing=%d processed=%d\n", os.Getpid(), accepted, processing, processed)
 }

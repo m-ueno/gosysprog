@@ -36,7 +36,7 @@ get5
 sleep 1
 
 # 全部終わるの待つ
-sleep 3
+sleep 5
 pkill -HUP start_server
 
 echo done
