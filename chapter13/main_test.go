@@ -1,10 +1,43 @@
 package main_test
 
 import (
+	"fmt"
 	"sync"
 	"time"
-	"fmt"
 )
+
+func ExampleWithoutMutex() {
+	// Mutexとらないと競合する
+
+	var n int
+
+	for i := 0; i < 1000; i++ {
+		go func() {
+			n++
+		}()
+	}
+	time.Sleep(time.Second)
+	fmt.Println(n)
+	// Output: 918
+}
+
+func ExampleMutex() {
+	// Mutexとると競合しない
+
+	var n int
+	var mu sync.Mutex
+
+	for i := 0; i < 1000; i++ {
+		go func() {
+			mu.Lock()
+			n++
+			mu.Unlock()
+		}()
+	}
+	time.Sleep(time.Second * 3)
+	fmt.Println(n)
+	// Output: 1000
+}
 
 // 13.2 Go言語の並列処理のための道具
 // goroutineの起動よりもループ変数が回るのが早いので
@@ -27,9 +60,9 @@ func ExampleGoroutinePassingArgsWait() {
 	// 上の改良 goroutineの引数わたしにする
 	tasks := []string{"taskA", "taskB", "taskC"}
 	for i, task := range tasks {
-		go func(n int, _task string) {
+		go func(n int, task string) {
 			time.Sleep(time.Duration(n * 1000)) // 0, 1000, 2000 milliseconds
-			fmt.Println(_task)
+			fmt.Println(task)
 		}(i, task)
 	}
 
@@ -40,38 +73,94 @@ func ExampleGoroutinePassingArgsWait() {
 	// taskB
 	// taskC
 }
+func ExampleConditionCritical() {
+	// cond.Waitのソースを読むと, Lock～Wait(), Wait()～Unlock()間はいずれもクリティカルセクション
+	// なので次のようにかいても競合しない
 
-// 13.7 syncパッケージ
-// 条件変数
-func ExampleCondition() {
-	var mutex sync.Mutex
-	cond := sync.NewCond(&mutex)
+	l := new(sync.Mutex)
+	c := sync.NewCond(l)
+	N := 10
 
-	for _, name := range []string{"A", "B", "C"} {
-		go func(name string) {
-			// 条件変数condを触るスレッドが複数あるのでロックを取ってから
-			// mutex.Lock()
-			// defer mutex.Unlock()
-			cond.L.Lock()
-			defer cond.L.Unlock()
+	var counter int
 
-			cond.Wait()
-			fmt.Println(name)
-		}(name)
+	for i := 0; i < N; i++ {
+		i := i
+		go func() {
+			c.L.Lock()
+			defer c.L.Unlock()
+			fmt.Printf("id=%d\n", i)
+			// ここはクリティカルセクション
+			counter++
+			c.Wait()
+
+			// ここもクリティカルセクション
+			counter++
+		}()
 	}
-
-	fmt.Println("よーい")
 	time.Sleep(time.Second)
-	fmt.Println("どん")
-	cond.Broadcast() // Broadcastするのは1箇所だけだから、ここではロック取らなくて良い
+	c.Broadcast()
+	time.Sleep(time.Second * 3)
+	// Output: 20
+}
+
+// 13.7.4 sync.Condの練習
+// スレッドセーフなFIFOキューをchannelを使わずに実装してみる
+type Q struct {
+	elements []int
+	capacity int
+	l        *sync.Mutex
+	c        *sync.Cond
+}
+
+func NewQ(cap int) *Q {
+	l := new(sync.Mutex)
+	c := sync.NewCond(l)
+	return &Q{
+		[]int{},
+		cap,
+		l,
+		c,
+	}
+}
+
+func (q *Q) Queue(elem int) {
+	q.l.Lock()
+	defer q.l.Unlock()
+
+	for len(q.elements) == q.capacity {
+		fmt.Println("waiting nofull")
+		q.c.Wait()
+	}
+	q.elements = append(q.elements, elem)
+	q.c.Signal()
+}
+
+func (q *Q) Dequeue() int {
+	q.l.Lock()
+	defer q.l.Unlock()
+
+	for len(q.elements) == 0 {
+		fmt.Println("waiting noempty")
+		q.c.Wait()
+	}
+	a := q.elements
+	x, a := a[len(a)-1], a[:len(a)-1]
+	q.elements = a // ?
+	q.c.Signal()
+
+	return x
+}
+
+func ExampleQ() {
+	q := NewQ(5)
+	for i := 0; i < 10; i++ {
+		i := i
+		go q.Queue(i)
+		go func() {
+			time.Sleep(time.Millisecond * 100)
+			fmt.Println(q.Dequeue())
+		}()
+	}
 	time.Sleep(time.Second)
-
-	// A B Cは順不同
-
 	// Output:
-	// よーい
-	// どん
-	// A
-	// B
-	// C
 }
