@@ -1,7 +1,5 @@
 # 第14章 並行・並列処理の手法と設計のパターン
 
-> 本章では、並行・並列処理の手法に関する一般的なパターンと、Go言語における並行・並列処理の設計のパターンを取り上げます。
-
 * 14.1 並行・並列処理の手法のパターン
 * 14.2 Goにおける並行・並列処理のパターン集
 
@@ -29,19 +27,27 @@
 > ト駆動、マルチスレッド、ストリーミング・プロセッシングの4つのパターンがあり
 > ます
 
+マルチプロセス
+
+* OSのプロセスによる並行・並列化
+* メモリ空間が別れているので安全
+* オーバーヘッドは大きい
+
+マルチスレッド
+
+* OSのスレッド/軽量スレッドを使った並行・並列化
+* プロセスほどではないが、OSのスレッドは比較的大きなスタックメモリ（1～2メガバイト）を必要とする
+* RubyやPythonは同時に1スレッドしか動かないので性能は上がらない（並行だが並列でない）
+
 イベント駆動
 
 * 目的：シングルスレッドあたりの性能向上
 * システムプログラミングの文脈では I/O多重化のこと
 
-マルチプロセス、マルチスレッド
-
-* OSのプロセス/スレッドを使った並列化
-
 ストリーミングプロセッシング
 
 * 並行・並列処理を実現するプログラミング手法のひとつ
-* 現代では、ストリームプロセッサとしてGPU, ストリーム言語としてCUDAが有名
+* 今は「ストリームプロセッサ」としてGPU、「ストリーム言語」としてCUDAが有名
     * 他にも色々あったらしい
 ```
 これからの並列計算のためのGPGPU連載講座(VI) 様々なGPGPUプログラミング環境
@@ -77,129 +83,46 @@ https://www.softek.co.jp/SPG/Pgi/TIPS/public/accel/gpu-accel2.html
 ## 14.2 Goにおける並行・並列処理のパターン集
 
 * アムダールの法則より、プログラム全体の性能向上率は、プログラム全体のうち並列化できる部分の割合Pに依存
-* Pを改善するには、逐次処理をなるべく分解して、同じ粒度のシンプルなたくさんのジョブに分ける
+* Pを改善するには、逐次処理を分解して、なるべく同じ実行コストの、依存関係のない処理に分ける
+
 
 ### 14.2.1 同期→非同期化
 
 重い処理をばらして並列実行するためにgoroutine, channelを使う
 
-#### 重い関数をgoroutineでラップするパターン
+goroutineの寿命（リーク）に注意する★補足
 
-* goroutineの寿命（リーク）に注意
-
-```go
-
-// 重い関数, 同期
-func Heavy() int {...}
-
-// 重い関数をラップ、チャネルを返す関数
-func HeavyAsync() (chan int) {
-    chanResult := make(chan int)
-
-    go func() {
-        chanResult <- Heavy()
-    }
-
-    return chanResult
-}
-
-func main() {
-    // HeavyAsyncの返り値をreadしていれば, 完了を待ってgoroutineを抜けるが
-    n := <- HeavyAsync()
-    fmt.Println(n)
-}
-
-func main() {
-    // HeavyAsyncの返り値をreadしていなければ、goroutineがいつまでも終わらない
-    // 途中でキャンセルもされない
-    select {
-    case n := <-HeavyAsync(10):
-        break
-    case n := <-HeavyAsync(11):
-        break
-    }
-}
-```
-
-#### 重い関数 (同期) を、タイムアウト付きにする
-
-タイムアウトが先に来た場合、Heavyは裏で実行したままになる。
-（→完了次第、resultに書き込んで終わる）
-
-```go
-// 同期
-func HeavyWithTimeout(timeout time.Duration) (int, error) {
-    result := make(chan int, 1)
-
-    go func() {
-        result <- Heavy()
-    }()
-
-    select {
-    case k := <-result:
-        return k, nil
-    case <-time.After(timeout):
-        return 0, errors.New("timed out")
-    }
-}
-```
-
-#### goroutineのリークに注意
-
-```
-Goroutineハンターが過労死する前に - Qiita
-https://qiita.com/i_yudai/items/3336a503079ac5749c35
-> 心得
-> goroutine安易に作らない
-> goroutineを作るときは同じ関数で終了させる
-> channelよりもsync.Mutexとsync.WaitGroupで簡単に実装できないか考える
-> ...
-```
-
-次のように終わらないgoroutineは簡単に書けてしまう.
-プロセスの寿命が長いと、そのうちOOMでプロセスごとOSに殺される.
-
-```go
-func leak() {
-    // 読み込みでブロックされる例
-    ch := make(chan int)
-    <-ch
-}
-// go leak() でリーク
-
-func leak2() chan bool {
-    // 書き込みでブロックされる例
-    // （この場合はバッファありチャネルにすれば一応ブロックされない）
-    ch := make(chan bool)
-    go func() {
-        ch <- true // ここで止まり永遠にgoroutineが終わらない
-        fmt.Println("done")
-    }()
-    return ch
-}        err := s0.Activate(cctx)
-        if err != nil {
-            log.Printf("s0 stopped: %s", err)
-        }
-
-// _ = leak2() としてchan boolを捨ててしまうと、leak2の中のgoroutineがいつまでも終わらない
-```
 
 ### 14.2.2 非同期→同期化
 
-非同期にしたらどこかで待ち合わせる必要がある。さもないとmain()を抜けてしまう
+非同期にしたらどこかで待ち合わせる必要がある（さもないとmain関数を抜けてしまう）
 
 * channel
-    * 他の単一スレッドの、待ち合わせ
+    * 他の1スレッドの待ち合わせ
 * select (p.278)
-    * 他の複数のスレッドの、待ち合わせ
+    * 他の複数のスレッドの待ち合わせ
     * default節なしで、イベント駆動
         * I/Oのシステムコールでいうと, epoll
-        * vs. フロー駆動
-        * イベントをキューイング, 対応するサブルーチンを実行
     * default節ありで、非同期I/O として扱えます
-* syncパッケージ
+* syncパッケージ (13章)
+  * 使い分け https://github.com/golang/go/wiki/MutexOrChannel)
 
-### Producer-Consumer
+
+`default節ありで非同期I/Oとして扱えます`の意味がわからないがイディオムで覚えてしまえば良い。
+
+```go
+for {
+	select {
+	case <-ctx.Done():
+		return
+	default:
+	}
+
+	// なんか処理
+}
+```
+
+### 14.2.3 Producer-Consumer
 
 キューを仲立ちに非同期化。よくあるやつ。
 
@@ -221,34 +144,40 @@ func leak2() chan bool {
 
 ### 他の言語の紹介
 
-* Future/Promise
-    * Goではバッファなしチャネルの受信/送信
-* ReactiveX
-    * 高級なオブザーバーパターン
-    * Observable
-        * chan interface{}
-    * Observer
-        * ハンドラ関数を持つ構造体
-* アクターモデル
-    * 現在はErlang/OTPのsupervision treeがセットになったものを呼ぶことがほとんど？
-        * Akkaもそうらしい
-        * Supervision and Monitoring • Akka Documentation
-        * https://doc.akka.io/docs/akka/2.5/general/supervision.html
-        * 他のアクターモデルの実装は知らない
-    * https://github.com/AsynkronIT/protoactor-go
-        * Ultra fast distributed actors for Go, C# and Java/Kotlin
-        * Akka.NETのGo/Java
-        * アクター
-            * Receive()メソッドを持つ構造体
-    * https://github.com/teivah/gosiris
-        * An actor framework for Go
+Future/Promise (14.2.8)
+
+* Goではバッファなしチャネルの受信/送信
+
+
+
+ReactiveX (14.2.9)
+
+* オブザーバーパターンが少し賢くなったもの
+* Observable
+    * chan interface{}
+* Observer
+    * ハンドラ関数を持つ構造体
+
+アクターモデル (14.2.10)
+
+* 現在はErlang/OTPのsupervision treeがセットになったものを呼ぶことがほとんど？
+    * Akkaもそうらしい
+    * Supervision and Monitoring • Akka Documentation
+    * https://doc.akka.io/docs/akka/2.5/general/supervision.html
+    * （他のアクターモデルの実装は知らない）
+* https://github.com/AsynkronIT/protoactor-go
+    * Ultra fast distributed actors for Go, C# and Java/Kotlin
+    * Akka.NETのGo/Java版
+    * アクター：Receive()メソッドを持つ構造体
+* https://github.com/teivah/gosiris
+    * An actor framework for Go
 
 ## まとめ
 
 Goの並列処理パターン集
 
 * 非同期化 (14.2.1)
-    * goroutineを作るときはリークしないように
+    * goroutineを作るときはリークしないように ★補足
     * Producer-Consumer (14.2.3)
         * 開始した順で（続く処理を）おこなう：チャネルのチャネル (14.2.4)
         * バックプレッシャー (14.2.5)
@@ -262,40 +191,118 @@ Goの並列処理パターン集
     * ReactiveX (14.2.9)
     * アクターモデル (14.2.10)
 
-<!--
-## channelよりもsyncパッケージ (13章) を使った方が追いやすいコードが書けそう？
+## 補足
+
+
+### goroutineのリークに注意
+
+次のように終わらないgoroutineは簡単に書けてしまう.
+プロセスの寿命が長いと、そのうちOOMでランタイムごとOSに止められる.
+
+```go
+func leak1() {
+    // 読み込みでブロックされる例
+    ch := make(chan int)
+    <-ch
+}
+// go leak1() でリーク
+
+func leak2() chan bool {
+    // 書き込みでブロックされる例
+    ch := make(chan bool)
+    go func() {
+        ch <- true // ここで止まり永遠にgoroutineが終わらない
+        fmt.Println("done")
+    }()
+    return ch
+}
+// _ = leak2() としてchan boolを捨ててしまうと、leak2の中のgoroutineがいつまでも終わらない
+// （この場合はバッファありチャネルにすれば一応ブロックされない）
+```
+
+どうやってgoroutineの終了を保証するか。おそらくgoroutineを作ったところで終了させるのが基本。
+
+とはいえ、goroutineは他のgoroutineからkillできないので、途中で中断するかもしれないgoroutineは、他のgoroutineから通知を受けたら処理を終えて抜けるようにするしかない。
+* contextを第一引数に受け取るのが一般的
+  * 例
+	  * https://golang.org/pkg/net/http/#NewRequestWithContext
+	  * https://golang.org/pkg/net/http/#Server.Shutdown
+* 他にも、同じ構造体の別メソッドに呼応して止まる標準APIもある
+  * 例 https://golang.org/pkg/net/http/#Transport.CancelRequest (deprecated)
+  * (timer.Stop ?)
+
+次のコードは、Heavy関数を途中中断できるように書き換えて、goroutineを起動したら必ずそのgoroutineに通知を送る例。
+
+```go
+func Heavy() {
+	time.Sleep(time.Hour)
+}
+
+func HeavyWithContext(ctx context.Context) {
+  timer := time.NewTimer(time.Hour)
+  select {
+  case <-ctx.Done():
+    timer.Stop()
+    return
+  case <-timer.C:
+    return
+  }
+}
+
+func Foo() {
+  ctx, cancel := context.WithCancel(context.Background())
+  defer cancel()
+
+  go func() {
+    HeavyWithContext(ctx)
+    fmt.Println("done")
+  }()
+
+  // なんかする
+}
+
+```
+
+参考
+
+Goroutineハンターが過労死する前に - Qiita
+https://qiita.com/i_yudai/items/3336a503079ac5749c35
 
 ```
 Goroutineハンターが過労死する前に - Qiita
 https://qiita.com/i_yudai/items/3336a503079ac5749c35
 
-    Goといえばgoroutineとchannel。しかし、channelを適切に扱い続けることは、実際のと
-    ころ比較的難しい。キャパシティの考慮漏れでwriteが出来ずにgoroutineがスタックする
-    ことはよくあるし、イベントループ内に巨大なselectが乱立してコードの見通しが悪くな
-    ることもよくある。channelの使い方に起因したgoroutineリークは事実として非常に多
-    い。
+	心得
+	1.goroutine安易に作らない
+	2.goroutineを作るときは同じ関数で終了させる
+	3.channelよりもsync.Mutexとsync.WaitGroupで簡単に実装できないか考える
+	...
+
+	Goといえばgoroutineとchannel。しかし、channelを適切に扱い続けることは、実際のと
+	ころ比較的難しい。キャパシティの考慮漏れでwriteが出来ずにgoroutineがスタックする
+	ことはよくあるし、イベントループ内に巨大なselectが乱立してコードの見通しが悪くな
+	ることもよくある。channelの使い方に起因したgoroutineリークは事実として非常に多
+	い。
 ```
 
-上のように、channelのキャパシティ考慮漏れ、巨大selectの見通しの悪さ、goroutineのリーク
-を気をつけて並列化しないとひどいことになる。
+### 非同期APIにしないほうがいい？
 
-対策「Activateパターン」
+Go標準APIはほとんど同期型APIで（つまりチャネルを返さない）、ユーザが必要に応じて非同期化することになっている。
 
-* type Statefull
-* method
-    * Activate(context.Context) error
-        * 無限ループ. for { select }
-        * contextでキャンセルできる
-    * Put(context.Context, value []byte) error
-        * leaseIDを元に値を書き込む
-    * Current() int
-        * leaseIDを返す
-    * withTimeout(base context.Context) context.Context
+ライブラリ関数も同期型にしたほうがいいのか。
 
-使う側
-
-```go
-ctx, cancel := ..
-defer cancel()
 ```
- -->
+アプリ：同期＋非同期
+---同期型API---
+3rd partyライブラリ
+  内部は非同期
+---同期型API---
+標準ライブラリ
+  内部は非同期
+```
+
+
+* チャネルを返す代わりに、コールバック関数を受け取るパターン
+`os.Walk(walkFn)`
+* 時間が来たらチャネルに書き込む代わりに、一定時間ブロックするパターン
+
